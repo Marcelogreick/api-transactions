@@ -31,13 +31,15 @@ export async function transactionsRoutes(app: FastifyInstance) {
         id: z.string().uuid(),
       });
 
-      const params = getTransactionSchema.parse(request.params);
+      const { id } = getTransactionSchema.parse(request.params);
 
-      const { id } = params;
+      const { sessionId } = request.cookies;
 
       const transaction = await knex("transactions")
-        .select("*")
-        .where({ id })
+        .where({
+          session_id: sessionId,
+          id,
+        })
         .first();
 
       if (!transaction) {
@@ -53,8 +55,11 @@ export async function transactionsRoutes(app: FastifyInstance) {
     {
       preHandler: [checkSessionIdExists],
     },
-    async () => {
+    async (request) => {
+      const { sessionId } = request.cookies;
+
       const transactions = await await knex("transactions")
+        .where("session_id", sessionId)
         .sum("amount", {
           as: "amount",
         })
